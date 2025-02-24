@@ -7,19 +7,16 @@ typedef struct {
     long unsigned int res;
 } Numbers;
 
-int main(){
+int main () {
     long unsigned int N;
-    Numbers *arr;
 
     scanf ("%lu", &N);
 
-    arr = (Numbers*)malloc(N * sizeof(Numbers));
+    Numbers *arr = malloc (N * sizeof(Numbers));
 
-    for (int i = 0; i < N; i++) {
-        scanf("%lu %lu", &arr[i].a, &arr[i].b);
-    }
+    for (long unsigned int i = 0; i < N; i++) {
+        scanf ("%lu %lu", &arr[i].a, &arr[i].b);
 
-    for (int i = 0; i < N; i++) {
         while (arr[i].a && arr[i].b) {
             if (arr[i].a > arr[i].b) {
                 arr[i].a = arr[i].a % arr[i].b;
@@ -30,19 +27,20 @@ int main(){
         
         if (arr[i].a) {
             arr[i].res = arr[i].a;
-        } else{
+        } else {
             arr[i].res = arr[i].b;
         }
     }
         
-    for (int i = 0; i < N; i++) {
+    for (long unsigned int i = 0; i < N; i++) {
         if (i == N - 1) {
             printf ("%lu", arr[i].res);
         } else {
             printf ("%lu\n", arr[i].res);
         }
     }
-    free(arr);
+
+    free (arr);
 
     return 0;
 }
