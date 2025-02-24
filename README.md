@@ -1,1 +1,1 @@
-# DSA-Tasks
+# Data Structures and Algorithms (DSA)
