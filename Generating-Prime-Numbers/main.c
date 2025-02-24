@@ -13,24 +13,24 @@ int main () {
     char *arr = malloc((max + 1) * sizeof(char));
 
     for (long unsigned int i = 0; i <= max; i++) {
-        arr[i] = 0;
+        arr[i] = 1;
     }
 
     for (long unsigned int i = 2; i * i <= max; i++) {
-        if (arr[i] == 0) {
+        if (arr[i]) {
             for (long unsigned int j = i * i; j <= max; j += i) {
-                arr[j] = 1;
+                arr[j] = 0;
             }
         }
     }
 
-    int first = 1;
+    int first = 0;
 
     for (long unsigned int i = min; i <= max; i++) {
-        if (arr[i] == 0) {
-            if (first) {
+        if (arr[i]) {
+            if (first == 0) {
                 printf("%lu", i);
-                first = 0;
+                first = 1;
             } else {
                 printf(", %lu", i);
             }
