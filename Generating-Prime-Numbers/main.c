@@ -1,20 +1,18 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-int main () {
+int main() {
     long unsigned int min, max;
 
     scanf("%lu %lu", &min, &max);
 
-    if (min == 0 || min == 1) {
+    if (min == 0 || min == 1)
         min = 2;
-    }
 
     char *arr = malloc((max + 1) * sizeof(char));
 
-    for (long unsigned int i = 0; i <= max; i++) {
+    for (long unsigned int i = 0; i <= max; i++)
         arr[i] = 1;
-    }
 
     for (long unsigned int i = 2; i * i <= max; i++) {
         if (arr[i]) {
@@ -31,9 +29,8 @@ int main () {
             if (first == 0) {
                 printf("%lu", i);
                 first = 1;
-            } else {
+            } else
                 printf(", %lu", i);
-            }
         }
     }
 
