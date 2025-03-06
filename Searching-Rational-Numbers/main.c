@@ -27,7 +27,7 @@ Number parseFraction(char *inp) {
 
     if (inp[i] == ',') {
         i++;
-        long long fracNum = 0, fracDen = 1;
+        long long fracNum = 0;
         int fracDigits = 0;
 
         while (inp[i] != '\0' && fracDigits < 9) {
@@ -47,13 +47,13 @@ Number parseFraction(char *inp) {
     return num;
 }
 
-int binarySearch(Number arr[], int size, Number match) {
+int binarySearch(Number arr[], int size, Number target) {
     int left = 0, right = size - 1;
 
     while (left <= right) {
         int mid = left + (right - left) / 2;
         long long leftVal = arr[mid].intPart * SCALE + arr[mid].fracPart;
-        long long rightVal = match.intPart * SCALE + match.fracPart;
+        long long rightVal = target.intPart * SCALE + target.fracPart;
 
         if (leftVal == rightVal)
             return mid + 1;
