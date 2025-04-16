@@ -2,183 +2,272 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
-#include <windows.h>
-#include <psapi.h>
 
-#define NUM_OPERATIONS 100000000
-#define MAX_ID 1000000000
+#include "w-b-tree.c"
+#include "treap-tree.c"
+#include "hashtable.c"
 
-typedef struct Data {
-    unsigned int id;
-    char firstName[30];
-    char lastName[30];
-} HashData;
-
-typedef struct HashTable {
-    HashData** table;
-    int size;
-    int count;
-} HashTable;
-
-HashTable* createHashTable(void);
-HashTable* insertHashTable(HashTable* ht, int id, const char* firstName, const char* lastName);
-HashData* searchHashTable(HashTable* ht, int id);
-HashTable* deleteHashTable(HashTable* ht, int id);
-void freeHashTable(HashTable* ht);
-
-typedef struct WBTree {
-    unsigned int id;
-    char firstName[30];
-    char lastName[30];
-    int size;
-    struct WBTree* leftWBTree;
-    struct WBTree* rightWBTree;
-} WBTree;
-
-WBTree* createWBTree(unsigned int id, const char *firstName, const char *lastName);
-WBTree* insertWBTree(WBTree *root, unsigned int id, const char *firstName, const char *lastName);
-WBTree* searchWBTree(WBTree *root, unsigned int id);
-WBTree* deleteWBTree(WBTree* root, unsigned int id);
-void freeWBTree(WBTree* root);
-
-unsigned int generateRandomID() {return 1 + (unsigned int)(((double)rand() / RAND_MAX) * (MAX_ID - 1));}
-
-SIZE_T getMemoryUsage() {
-    PROCESS_MEMORY_COUNTERS pmc;
-
-    if (GetProcessMemoryInfo(GetCurrentProcess(), &pmc, sizeof(pmc)))
-        return pmc.WorkingSetSize;
-
-    return 0;
-}
-
-void testHashTable(int* insertedIDs, int* storedIDs, const char* firstName, const char* lastName) {
-    LARGE_INTEGER frequency, start, end;
-    QueryPerformanceFrequency(&frequency);
-    QueryPerformanceCounter(&start);
-
-    HashTable* ht = createHashTable();
-    SIZE_T memoryBefore = getMemoryUsage();
-
-    int inserts = 0, searches = 0, deletes = 0;
-
-    for (int i = 0; i < NUM_OPERATIONS; i++) {
-        int operation = rand() % 3; // 0 - Insert, 1 - Search, 2 - Delete
-        int randomID = generateRandomID();
-
-        switch (operation) {
-            case 0: // Insert
-                insertHashTable(ht, randomID, firstName, lastName);
-                inserts++;
-                if (*storedIDs < NUM_OPERATIONS) {
-                    insertedIDs[*storedIDs] = randomID;
-                    (*storedIDs)++;
-                }
-                break;
-            case 1: // Search
-                if (*storedIDs > 0) {
-                    int searchID = insertedIDs[rand() % *storedIDs];
-                    searchHashTable(ht, searchID);
-                    searches++;
-                }
-                break;
-            case 2: // Delete
-                if (*storedIDs > 0) {
-                    int deleteID = insertedIDs[rand() % *storedIDs];
-                    deleteHashTable(ht, deleteID);
-                    deletes++;
-                }
-                break;
-        }
+void testWBTree(const char* filename) {
+    FILE* file = fopen(filename, "r");
+    if (!file) {
+        printf("Cannot open file %s\n", filename);
+        return;
     }
-
-    QueryPerformanceCounter(&end);
-    SIZE_T memoryAfter = getMemoryUsage();
-    double timeSpent = (double)(end.QuadPart - start.QuadPart) / frequency.QuadPart;
-    double memoryUsageKB = (double)(memoryAfter - memoryBefore) / 1024.0;
-    double avgTimePerOp = timeSpent / NUM_OPERATIONS * 1000000.0;
-
-    printf("Execution time: %.6f seconds\n", timeSpent);
-    printf("Peak memory usage: %.2f KB\n", memoryUsageKB);
-    printf("Remaining elements: %d\n", ht->count);
-    printf("Operations:\nInserts = %d\nSearches = %d\nDeletes = %d\n", inserts, searches, deletes);
-    printf("Average time per operation: %.2f microseconds\n", avgTimePerOp);
-
-    freeHashTable(ht);
-}
-
-void testWBTree(int* insertedIDs, int* storedIDs, const char* firstName, const char* lastName) {
-    LARGE_INTEGER frequency, start, end;
-    QueryPerformanceFrequency(&frequency);
-    QueryPerformanceCounter(&start);
 
     WBTree* root = NULL;
-    SIZE_T memoryBefore = getMemoryUsage();
 
+    double totalInsertTime = 0.0;
+    double totalSearchTime = 0.0;
+    double totalDeleteTime = 0.0;
     int inserts = 0, searches = 0, deletes = 0;
+    char line[100];
+    unsigned int id;
+    char firstName[30];
+    char lastName[30];
 
-    for (int i = 0; i < NUM_OPERATIONS; i++) {
-        int operation = rand() % 3; // 0 - Insert, 1 - Search, 2 - Delete
-        int randomID = generateRandomID();
+    while (fgets(line, sizeof(line), file)) {
+        clock_t start, end;
 
-        switch (operation) {
-            case 0: // Insert
-                root = insertWBTree(root, randomID, firstName, lastName);
-                inserts++;
-                if (*storedIDs < NUM_OPERATIONS) {
-                    insertedIDs[*storedIDs] = randomID;
-                    (*storedIDs)++;
-                }
-                break;
-            case 1: // Search
-                if (*storedIDs > 0) {
-                    int searchID = insertedIDs[rand() % *storedIDs];
-                    searchWBTree(root, searchID);
-                    searches++;
-                }
-                break;
-            case 2: // Delete
-                if (*storedIDs > 0) {
-                    int deleteID = insertedIDs[rand() % *storedIDs];
-                    root = deleteWBTree(root, deleteID);
-                    deletes++;
-                }
-                break;
+        if (line[0] == 'i') {  // Insert
+            sscanf(line, "i %u %s %s", &id, firstName, lastName);
+            start = clock();
+            root = insertWBTree(root, id, firstName, lastName);
+            end = clock();
+            totalInsertTime += (double)(end - start) / CLOCKS_PER_SEC;
+            inserts++;
+        }
+        else if (line[0] == 's') {  // Search
+            sscanf(line, "s %u", &id);
+            start = clock();
+            searchWBTree(root, id);
+            end = clock();
+            totalSearchTime += (double)(end - start) / CLOCKS_PER_SEC;
+            searches++;
+        }
+        else if (line[0] == 'd') {  // Delete
+            sscanf(line, "d %u", &id);
+            start = clock();
+            root = deleteWBTree(root, id);
+            end = clock();
+            totalDeleteTime += (double)(end - start) / CLOCKS_PER_SEC;
+            deletes++;
         }
     }
 
-    QueryPerformanceCounter(&end);
-    SIZE_T memoryAfter = getMemoryUsage();
-    double timeSpent = (double)(end.QuadPart - start.QuadPart) / frequency.QuadPart;
-    double memoryUsageKB = (double)(memoryAfter - memoryBefore) / 1024.0;
-    double avgTimePerOp = timeSpent / NUM_OPERATIONS * 1000000.0;
-    int treeSize = (root != NULL) ? root->size : 0;
+    double totalTime = totalInsertTime + totalSearchTime + totalDeleteTime;
+    double avgTimePerOp = totalTime / (inserts + searches + deletes) * 1000000.0; // Average time per operation in microseconds
 
-    printf("Execution time: %.6f seconds\n", timeSpent);
-    printf("Peak memory usage: %.2f KB\n", memoryUsageKB);
-    printf("Remaining elements: %d\n", treeSize);
-    printf("Operations:\nInserts = %d\nSearches = %d\nDeletes = %d\n", inserts, searches, deletes);
-    printf("Average time per operation: %.2f microseconds\n", avgTimePerOp);
+    printf("\n+-----------------------------------+\n");
+    printf("|         WBTree Test Results       |\n");
+    printf("+-----------------------------------+\n");
+    printf("| Total Execution Time | %.6f s |\n", totalTime);
+    printf("| Insert Time          | %.6f s |\n", totalInsertTime);
+    printf("| Search Time          | %.6f s |\n", totalSearchTime);
+    printf("| Delete Time          | %.6f s |\n", totalDeleteTime);
+    printf("+-----------------------------------+\n");
+    printf("| Inserts              | %10d |\n", inserts);
+    printf("| Searches             | %10d |\n", searches);
+    printf("| Deletes              | %10d |\n", deletes);
+    printf("+-----------------------------------+\n");
+    printf("| Avg Time per Op      |    %.2f us |\n", avgTimePerOp);
+    printf("+-----------------------------------+\n");
 
+    fclose(file);
     freeWBTree(root);
 }
 
+void testTreapTree(const char* filename) {
+    FILE* file = fopen(filename, "r");
+    if (!file) {
+        printf("Cannot open file %s\n", filename);
+        return;
+    }
+
+    Treap* root = NULL;
+
+    double totalInsertTime = 0.0;
+    double totalSearchTime = 0.0;
+    double totalDeleteTime = 0.0;
+    int inserts = 0, searches = 0, deletes = 0;
+    char line[100];
+    unsigned int id;
+    char firstName[30];
+    char lastName[30];
+
+    while (fgets(line, sizeof(line), file)) {
+        clock_t start, end;
+
+        if (line[0] == 'i') {  // Insert
+            sscanf(line, "i %u %s %s", &id, firstName, lastName);
+            start = clock();
+            root = insertTreap(root, id, firstName, lastName);
+            end = clock();
+            totalInsertTime += (double)(end - start) / CLOCKS_PER_SEC;
+            inserts++;
+        }
+        else if (line[0] == 's') {  // Search
+            sscanf(line, "s %u", &id);
+            start = clock();
+            searchTreap(root, id);
+            end = clock();
+            totalSearchTime += (double)(end - start) / CLOCKS_PER_SEC;
+            searches++;
+        }
+        else if (line[0] == 'd') {  // Delete
+            sscanf(line, "d %u", &id);
+            start = clock();
+            root = deleteTreap(root, id);
+            end = clock();
+            totalDeleteTime += (double)(end - start) / CLOCKS_PER_SEC;
+            deletes++;
+        }
+    }
+
+    double totalTime = totalInsertTime + totalSearchTime + totalDeleteTime;
+    double avgTimePerOp = totalTime / (inserts + searches + deletes) * 1000000.0; // Average time per operation in microseconds
+
+    printf("\n+-----------------------------------+\n");
+    printf("|       TreapTree Test Results      |\n");
+    printf("+-----------------------------------+\n");
+    printf("| Total Execution Time | %.6f s |\n", totalTime);
+    printf("| Insert Time          | %.6f s |\n", totalInsertTime);
+    printf("| Search Time          | %.6f s |\n", totalSearchTime);
+    printf("| Delete Time          | %.6f s |\n", totalDeleteTime);
+    printf("+-----------------------------------+\n");
+    printf("| Inserts              | %10d |\n", inserts);
+    printf("| Searches             | %10d |\n", searches);
+    printf("| Deletes              | %10d |\n", deletes);
+    printf("+-----------------------------------+\n");
+    printf("| Avg Time per Op      |    %.2f us |\n", avgTimePerOp);
+    printf("+-----------------------------------+\n");
+
+    fclose(file);
+    freeTreap(root);
+}
+
+void testHashTable(const char* filename) {
+    FILE* file = fopen(filename, "r");
+    if (!file) {
+        printf("Cannot open file %s\n", filename);
+        return;
+    }
+
+    HashTable* ht = createHashTable();
+
+    double totalInsertTime = 0.0;
+    double totalSearchTime = 0.0;
+    double totalDeleteTime = 0.0;
+    int inserts = 0, searches = 0, deletes = 0;
+    char line[100];
+    unsigned int id;
+    char firstName[30];
+    char lastName[30];
+
+    while (fgets(line, sizeof(line), file)) {
+        clock_t start, end;
+
+        if (line[0] == 'i') {  // Insert
+            sscanf(line, "i %u %s %s", &id, firstName, lastName);
+            start = clock();
+            insertHashTable(ht, id, firstName, lastName);
+            end = clock();
+            totalInsertTime += (double)(end - start) / CLOCKS_PER_SEC;
+            inserts++;
+        }
+        else if (line[0] == 's') {  // Search
+            sscanf(line, "s %u", &id);
+            start = clock();
+            searchHashTable(ht, id);
+            end = clock();
+            totalSearchTime += (double)(end - start) / CLOCKS_PER_SEC;
+            searches++;
+        }
+        else if (line[0] == 'd') {  // Delete
+            sscanf(line, "d %u", &id);
+            start = clock();
+            deleteHashTable(ht, id);
+            end = clock();
+            totalDeleteTime += (double)(end - start) / CLOCKS_PER_SEC;
+            deletes++;
+        }
+    }
+
+    double totalTime = totalInsertTime + totalSearchTime + totalDeleteTime;
+    double avgTimePerOp = totalTime / (inserts + searches + deletes) * 1000000.0; // Average time per operation in microseconds
+
+    printf("\n+-----------------------------------+\n");
+    printf("|       HashTable Test Results      |\n");
+    printf("+-----------------------------------+\n");
+    printf("| Total Execution Time | %.6f s |\n", totalTime);
+    printf("| Insert Time          | %.6f s |\n", totalInsertTime);
+    printf("| Search Time          | %.6f s |\n", totalSearchTime);
+    printf("| Delete Time          | %.6f s |\n", totalDeleteTime);
+    printf("+-----------------------------------+\n");
+    printf("| Inserts              | %10d |\n", inserts);
+    printf("| Searches             | %10d |\n", searches);
+    printf("| Deletes              | %10d |\n", deletes);
+    printf("+-----------------------------------+\n");
+    printf("| Avg Time per Op      |    %.2f us |\n", avgTimePerOp);
+    printf("+-----------------------------------+\n");
+
+    fclose(file);
+    freeHashTable(ht);
+}
+
 int main() {
-    srand((unsigned int)time(NULL));
-    const char* firstName = "John";
-    const char* lastName = "Doe";
+    printf("\nTesting WBTree 1 000 000\n");
+    testWBTree("Operations/operations1.txt");
 
-    int* insertedIDs = (int*)malloc(NUM_OPERATIONS * sizeof(int));
-    int storedIDs = 0;
+    printf("\nTesting WBTree 2 000 000\n");
+    testWBTree("Operations/operations2.txt");
 
-    printf("Testing HashTable...\n");
-    testHashTable(insertedIDs, &storedIDs, firstName, lastName);
+    // printf("\nTesting WBTree 5 000 000\n");
+    // testWBTree("Operations/operations5.txt");
 
-    storedIDs = 0;
-    printf("\nTesting WBTree...\n");
-    testWBTree(insertedIDs, &storedIDs, firstName, lastName);
+    // printf("\nTesting WBTree 10 000 000\n");
+    // testWBTree("Operations/operations10.txt");
 
-    free(insertedIDs);
+    // printf("\nTesting WBTree 20 000 000\n");
+    // testWBTree("Operations/operations20.txt");
+
+    // printf("\nTesting WBTree 30 000 000\n");
+    // testWBTree("Operations/operations30.txt");
+
+    printf("\nTesting TreapTree 1 000 000\n");
+    testTreapTree("Operations/operations1.txt");
+
+    printf("\nTesting TreapTree 2 000 000\n");
+    testTreapTree("Operations/operations2.txt");
+
+    // printf("\nTesting TreapTree 5 000 000\n");
+    // testTreapTree("Operations/operations5.txt");
+
+    // printf("\nTesting TreapTree 10 000 000\n");
+    // testTreapTree("Operations/operations10.txt");
+
+    // printf("\nTesting TreapTree 20 000 000\n");
+    // testTreapTree("Operations/operations20.txt");
+
+    // printf("\nTesting TreapTree 30 000 000\n");
+    // testTreapTree("Operations/operations30.txt");
+
+    printf("\nTesting HashTable 1 000 000\n");
+    testHashTable("Operations/operations1.txt");
+
+    printf("\nTesting HashTable 2 000 000\n");
+    testHashTable("Operations/operations2.txt");
+
+    // printf("\nTesting HashTable 5 000 000\n");
+    // testHashTable("Operations/operations5.txt");
+
+    // printf("\nTesting HashTable 10 000 000\n");
+    // testHashTable("Operations/operations10.txt");
+
+    // printf("\nTesting HashTable 20 000 000\n");
+    // testHashTable("Operations/operations20.txt");
+
+    // printf("\nTesting HashTable 30 000 000\n");
+    // testHashTable("Operations/operations30.txt");
 
     return 0;
 }
