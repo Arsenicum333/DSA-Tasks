@@ -2,7 +2,7 @@ import random
 import string
 
 input = [""]
-halfSize = 1000000
+halfSize = 500000
 
 def generateRandomName():
     length = random.randint(3, 18)
@@ -23,6 +23,6 @@ for i in range(0, halfSize):
 
 random.shuffle(input)
 
-with open(f'Operations/operations2.txt', 'w', encoding='utf-8') as file:
+with open(f'Operations/operations1.txt', 'w', encoding='utf-8') as file:
     for item in input:
         file.write(item)
